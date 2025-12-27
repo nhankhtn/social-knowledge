@@ -1,7 +1,7 @@
 import google.generativeai as genai
 from typing import Optional
 
-from ...config.settings import settings
+from ....config.settings import settings
 
 
 class GeminiProvider:

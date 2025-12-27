@@ -138,8 +138,6 @@ class JobScheduler:
             name="Crawl and Process News",
             replace_existing=True
         )
-
-        await self.crawl_and_process_job()
         
         self.scheduler.start()
         logger.info(f"Scheduler started. Jobs will run every {interval_hours} hours.")
