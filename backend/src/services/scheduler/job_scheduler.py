@@ -47,71 +47,122 @@ class JobScheduler:
                 
                 logger.info(f"Found {len(new_articles)} articles to summarize")
                 
-                # Step 3: Summarize and send notifications
-                for article in new_articles:
-                    try:
-                        # Generate summary
-                        summary_text = self.summarizer.summarize_article(
-                            title=article.title,
-                            content=article.content,
-                            max_length=200
-                        )
-                        
-                        # Save summary
-                        summary = Summary(
-                            article_id=article.id,
-                            summary_text=summary_text
-                        )
-                        db.add(summary)
-                        db.flush()
-                        
-                        # Send to Discord bot (legacy support)
-                        # if self.discord_bot.token and settings.discord_channel_id:
-                        #     message_id = await self.discord_bot.send_summary(
-                        #         title=article.title,
-                        #         summary=summary_text,
-                        #         url=article.url,
-                        #         source_name=article.source.name
-                        #     )
+                if not new_articles:
+                    logger.info("No articles to process")
+                    return
+                
+                # Get active users for notifications (used in both batch and fallback)
+                active_users = db.query(User).join(NotificationChannel).filter(
+                    NotificationChannel.is_active == True
+                ).distinct().all()
+                
+                # Step 3: Batch summarize all articles
+                try:
+                    # Prepare articles data for batch processing
+                    articles_data = [
+                        {
+                            'title': article.title,
+                            'content': article.content
+                        }
+                        for article in new_articles
+                    ]
+                    
+                    # Generate summaries in batch
+                    logger.info(f"Summarizing {len(articles_data)} articles in batch...")
+                    summary_texts = self.summarizer.summarize_articles_batch(
+                        articles=articles_data,
+                        max_length=200
+                    )
+                    
+                    # Step 4: Save summaries and send notifications
+                    
+                    for idx, article in enumerate(new_articles):
+                        try:
+                            summary_text = summary_texts[idx] if idx < len(summary_texts) else ""
                             
-                        #     if message_id:
-                        #         discord_msg = DiscordMessage(
-                        #             summary_id=summary.id,
-                        #             channel_id=settings.discord_channel_id,
-                        #             message_id=message_id
-                        #         )
-                        #         db.add(discord_msg)
-                        
-                        # Send to all active user notification channels
-                        active_users = db.query(User).join(NotificationChannel).filter(
-                            NotificationChannel.is_active == True
-                        ).distinct().all()
-                        
-                        for user in active_users:
-                            for channel in user.notification_channels:
-                                if not channel.is_active:
-                                    continue
-                                
-                                try:
-                                    await self.notification_sender.send(
-                                        provider=channel.provider,
-                                        credentials=channel.credentials,
-                                        title=article.title,
-                                        summary=summary_text,
-                                        url=article.url,
-                                        source_name=article.source.name
-                                    )
-                                    logger.info(f"Sent to user {user.id} via {channel.provider}")
-                                except Exception as e:
-                                    logger.error(f"Failed to send to user {user.id} channel {channel.id}: {e}")
-                        
-                        db.commit()
-                        logger.info(f"Processed article: {article.title[:50]}...")
-                        
-                    except Exception as e:
-                        logger.error(f"Error processing article {article.id}: {e}")
-                        db.rollback()
-                        continue
+                            if not summary_text:
+                                logger.warning(f"Empty summary for article {article.id}, skipping")
+                                continue
+                            
+                            # Save summary
+                            summary = Summary(
+                                article_id=article.id,
+                                summary_text=summary_text
+                            )
+                            db.add(summary)
+                            db.flush()
+                            
+                            # Send to all active user notification channels
+                            for user in active_users:
+                                for channel in user.notification_channels:
+                                    if not channel.is_active:
+                                        continue
+                                    
+                                    try:
+                                        await self.notification_sender.send(
+                                            provider=channel.provider,
+                                            credentials=channel.credentials,
+                                            title=article.title,
+                                            summary=summary_text,
+                                            url=article.url,
+                                            source_name=article.source.name
+                                        )
+                                        logger.info(f"Sent to user {user.id} via {channel.provider}")
+                                    except Exception as e:
+                                        logger.error(f"Failed to send to user {user.id} channel {channel.id}: {e}")
+                            
+                            logger.info(f"Processed article: {article.title[:50]}...")
+                            
+                        except Exception as e:
+                            logger.error(f"Error processing article {article.id}: {e}")
+                            continue
+                    
+                    # Commit all summaries at once
+                    db.commit()
+                    logger.info(f"Successfully processed {len(new_articles)} articles")
+                    
+                except Exception as e:
+                    logger.error(f"Error in batch summarization: {e}")
+                    db.rollback()
+                    # Fallback to individual processing if batch fails
+                    logger.info("Falling back to individual article processing...")
+                    for article in new_articles:
+                        try:
+                            summary_text = self.summarizer.summarize_article(
+                                title=article.title,
+                                content=article.content,
+                                max_length=200
+                            )
+                            
+                            summary = Summary(
+                                article_id=article.id,
+                                summary_text=summary_text
+                            )
+                            db.add(summary)
+                            db.flush()
+                            
+                            # Send notifications
+                            for user in active_users:
+                                for channel in user.notification_channels:
+                                    if not channel.is_active:
+                                        continue
+                                    try:
+                                        await self.notification_sender.send(
+                                            provider=channel.provider,
+                                            credentials=channel.credentials,
+                                            title=article.title,
+                                            summary=summary_text,
+                                            url=article.url,
+                                            source_name=article.source.name
+                                        )
+                                    except Exception as e:
+                                        logger.error(f"Failed to send notification: {e}")
+                            
+                            db.commit()
+                        except Exception as e:
+                            logger.error(f"Error processing article {article.id}: {e}")
+                            db.rollback()
+                            continue
                 
                 logger.info("Crawl and process job completed")
                 
