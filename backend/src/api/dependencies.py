@@ -5,6 +5,7 @@ from ..database.connection import get_db_session
 from ..database.models import User
 from ..repositories import UserRepository
 from ..utils.firebase_auth import verify_firebase_token
+from typing import Optional
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -14,9 +15,10 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def get_current_user(
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> User:
+    print("get_current_user", authorization)
     """Get current authenticated user from Authorization header"""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(

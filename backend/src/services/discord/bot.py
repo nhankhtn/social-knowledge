@@ -27,7 +27,7 @@ class DiscordBot:
         async def on_ready():
             logger.info(f"Discord bot logged in as {self.bot.user}")
     
-    async def send_summary(self, title: str, summary: str, url: str, source_name: str) -> Optional[str]:
+    async def send_summary(self, title: str, summary: str, url: str, source_name: str, category_name: Optional[str] = None) -> Optional[str]:
         """
         Send summary message to Discord channel
         
@@ -87,6 +87,8 @@ class DiscordBot:
                 url=url
             )
             embed.add_field(name="Nguồn", value=source_name, inline=True)
+            if category_name:
+                embed.add_field(name="Category", value=category_name, inline=True)
             embed.set_footer(text="Social Knowledge Bot")
             
             message = await channel.send(embed=embed)

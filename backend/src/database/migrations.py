@@ -99,6 +99,72 @@ def migrate_add_users_table():
         logger.warning(f"Error checking users table: {e}")
 
 
+def migrate_add_category_id_to_articles():
+    """Add category_id column to articles table if it doesn't exist"""
+    try:
+        with engine.connect() as conn:
+            # Check if column exists
+            result = conn.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='articles' AND column_name='category_id'
+            """))
+            
+            if result.fetchone():
+                logger.info("Column 'category_id' already exists in articles table")
+                return
+            
+            # Add column as nullable (since existing articles may not have categories)
+            conn.execute(text("""
+                ALTER TABLE articles 
+                ADD COLUMN category_id INTEGER
+            """))
+            conn.commit()
+            
+            # Add index for better query performance
+            try:
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS ix_articles_category_id 
+                    ON articles(category_id)
+                """))
+                conn.commit()
+            except ProgrammingError:
+                # Index might already exist
+                pass
+            
+            # Check if categories table exists before adding foreign key
+            categories_table_check = conn.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='categories'
+            """))
+            
+            if categories_table_check.fetchone():
+                # Add foreign key constraint
+                try:
+                    conn.execute(text("""
+                        ALTER TABLE articles 
+                        ADD CONSTRAINT articles_category_id_fkey 
+                        FOREIGN KEY (category_id) REFERENCES categories(id)
+                    """))
+                    conn.commit()
+                    logger.info("Successfully added foreign key constraint for category_id")
+                except ProgrammingError as e:
+                    # Constraint might already exist
+                    if "already exists" not in str(e).lower():
+                        logger.warning(f"Could not add foreign key constraint: {e}")
+            else:
+                logger.warning("Categories table does not exist yet, skipping foreign key constraint")
+            
+            logger.info("Successfully added 'category_id' column to articles table")
+            
+    except ProgrammingError as e:
+        logger.error(f"Error adding category_id column: {e}")
+        # If column already exists, that's okay
+        if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
+            raise
+
+
 def init_db_with_migrations():
     """Initialize database and run migrations"""
     from .connection import init_db
@@ -110,6 +176,7 @@ def init_db_with_migrations():
     try:
         migrate_add_slug_column()
         migrate_add_users_table()
+        migrate_add_category_id_to_articles()
     except Exception as e:
         logger.warning(f"Migration failed (might be expected if column/table already exists): {e}")
 

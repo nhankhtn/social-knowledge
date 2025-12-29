@@ -2,7 +2,7 @@
 name = "social-knowledge"
 version = "0.1.0"
 description = "Automated news crawler with AI summarization and Discord notifications"
-readme = "README.md"
+# readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "sqlalchemy>=2.0.0",

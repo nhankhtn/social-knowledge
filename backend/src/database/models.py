@@ -1,8 +1,35 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, func, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, func, JSON, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
+
+# Association table for User-Category many-to-many relationship
+user_category_preferences = Table(
+    'user_category_preferences',
+    Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('category_id', Integer, ForeignKey('categories.id', ondelete='CASCADE'), primary_key=True),
+    Column('created_at', DateTime(timezone=True), server_default=func.now())
+)
+
+
+class Category(Base):
+    """Model for article categories"""
+    __tablename__ = "categories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True, index=True)
+    slug = Column(String(100), nullable=False, unique=True, index=True)
+    description = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    articles = relationship("Article", back_populates="category")
+    users = relationship("User", secondary=user_category_preferences, back_populates="category_preferences")
+    
+    def __repr__(self):
+        return f"<Category(id={self.id}, name='{self.name}', slug='{self.slug}')>"
 
 
 class Source(Base):
@@ -33,8 +60,10 @@ class Article(Base):
     published_date = Column(DateTime(timezone=True))
     crawled_at = Column(DateTime(timezone=True), server_default=func.now())
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False, index=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True, index=True)
     
     source = relationship("Source", back_populates="articles")
+    category = relationship("Category", back_populates="articles")
     summaries = relationship("Summary", back_populates="article")
     
     def __repr__(self):
@@ -88,6 +117,7 @@ class User(Base):
     last_login_at = Column(DateTime(timezone=True))
     
     notification_channels = relationship("NotificationChannel", back_populates="user", cascade="all, delete-orphan")
+    category_preferences = relationship("Category", secondary=user_category_preferences, back_populates="users")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', firebase_uid='{self.firebase_uid}')>"

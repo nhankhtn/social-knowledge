@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import List
 from sqlalchemy.orm import Session
 import logging
 
 from ...database.models import Source, Article
 from ...repositories import SourceRepository
 from .rss_parser import RSSParser
-from .news_sites import ThanhNienCrawler
+from .news_sites import ThanhNienCrawler, TuoiTreCrawler
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,8 @@ class CrawlerService:
         
         if slug == "bao-thanh-nien":
             return ThanhNienCrawler(source.url)
+        elif slug == "bao-tuoi-tre" or slug == "tuoi-tre" or "tuoitre" in slug:
+            return TuoiTreCrawler(source.url)
         else:
             # Default to RSS parser
             return RSSParser(source.url)
@@ -58,13 +60,14 @@ class CrawlerService:
             if existing:
                 continue
             
-            # Create new article
+            # Create new article (category will be assigned by AI later)
             article = Article(
                 url=article_data.url,
                 title=article_data.title,
                 content=article_data.content,
                 published_date=article_data.published_date,
-                source_id=source.id
+                source_id=source.id,
+                category_id=None  # Will be assigned by AI during summarization
             )
             
             self.db.add(article)

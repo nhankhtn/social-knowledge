@@ -8,7 +8,7 @@ class NotificationSender:
     """Send notifications to different providers"""
     
     async def send(self, provider: str, credentials: Dict[str, Any], 
-                   title: str, summary: str, url: str, source_name: str) -> Optional[str]:
+                   title: str, summary: str, url: str, source_name: str, category_name: Optional[str] = None) -> Optional[str]:
         """
         Send notification based on provider type
         
@@ -17,11 +17,11 @@ class NotificationSender:
         """
         try:
             if provider == "discord_webhook":
-                return await self._send_discord_webhook(credentials, title, summary, url, source_name)
+                return await self._send_discord_webhook(credentials, title, summary, url, source_name, category_name)
             elif provider == "telegram_bot":
-                return await self._send_telegram(credentials, title, summary, url, source_name)
+                return await self._send_telegram(credentials, title, summary, url, source_name, category_name)
             elif provider == "slack_webhook":
-                return await self._send_slack_webhook(credentials, title, summary, url, source_name)
+                return await self._send_slack_webhook(credentials, title, summary, url, source_name, category_name)
             else:
                 logger.warning(f"Unknown provider: {provider}")
                 return None
@@ -30,21 +30,26 @@ class NotificationSender:
             return None
     
     async def _send_discord_webhook(self, credentials: Dict[str, Any], 
-                                     title: str, summary: str, url: str, source_name: str) -> Optional[str]:
+                                     title: str, summary: str, url: str, source_name: str, category_name: Optional[str] = None) -> Optional[str]:
         """Send via Discord webhook"""
         webhook_url = credentials.get("url")
         if not webhook_url:
             logger.error("Discord webhook URL not found in credentials")
             return None
         
+        fields = [
+            {"name": "Nguồn", "value": source_name, "inline": True}
+        ]
+        
+        if category_name:
+            fields.append({"name": "Thể loại", "value": category_name, "inline": True})
+        
         embed = {
             "title": title[:256],
             "description": summary[:4096],
             "color": 0x5865F2,
             "url": url,
-            "fields": [
-                {"name": "Nguồn", "value": source_name, "inline": True}
-            ],
+            "fields": fields,
             "footer": {"text": "Social Knowledge Bot"}
         }
         
@@ -60,7 +65,7 @@ class NotificationSender:
                 return None
     
     async def _send_telegram(self, credentials: Dict[str, Any], 
-                             title: str, summary: str, url: str, source_name: str) -> Optional[str]:
+                             title: str, summary: str, url: str, source_name: str, category_name: Optional[str] = None) -> Optional[str]:
         """Send via Telegram bot"""
         token = credentials.get("token")
         chat_id = credentials.get("chat_id")
@@ -69,7 +74,8 @@ class NotificationSender:
             logger.error("Telegram token or chat_id not found in credentials")
             return None
         
-        message = f"*{title}*\n\n{summary}\n\n🔗 [Xem thêm]({url})\n📰 Nguồn: {source_name}"
+        category_text = f"\n🏷️ Thể loại: {category_name}" if category_name else ""
+        message = f"*{title}*\n\n{summary}\n\n🔗 [Xem thêm]({url})\n📰 Nguồn: {source_name}{category_text}"
         
         api_url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = {
@@ -91,12 +97,18 @@ class NotificationSender:
                 return None
     
     async def _send_slack_webhook(self, credentials: Dict[str, Any], 
-                                   title: str, summary: str, url: str, source_name: str) -> Optional[str]:
+                                   title: str, summary: str, url: str, source_name: str, category_name: Optional[str] = None) -> Optional[str]:
         """Send via Slack webhook"""
         webhook_url = credentials.get("url")
         if not webhook_url:
             logger.error("Slack webhook URL not found in credentials")
             return None
+        
+        context_elements = [
+            {"type": "mrkdwn", "text": f"📰 *Nguồn:* {source_name}"}
+        ]
+        if category_name:
+            context_elements.append({"type": "mrkdwn", "text": f"🏷️ *Category:* {category_name}"})
         
         payload = {
             "blocks": [
@@ -110,9 +122,7 @@ class NotificationSender:
                 },
                 {
                     "type": "context",
-                    "elements": [
-                        {"type": "mrkdwn", "text": f"📰 *Nguồn:* {source_name}"}
-                    ]
+                    "elements": context_elements
                 },
                 {
                     "type": "actions",

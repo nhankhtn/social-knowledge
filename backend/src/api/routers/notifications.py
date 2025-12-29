@@ -9,7 +9,6 @@ from ...api.dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
-
 @router.post("", response_model=NotificationChannelResponse, status_code=status.HTTP_201_CREATED)
 def create_notification_channel(
     channel: NotificationChannelCreate,
