@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     crawl_interval_hours: int = 8
     timezone: str = "Asia/Ho_Chi_Minh"
     
+    # AI Batch Processing
+    summary_batch_size: int = 5  # Number of articles per batch for summarization
+    
     # Logging
     log_level: str = "INFO"
     
