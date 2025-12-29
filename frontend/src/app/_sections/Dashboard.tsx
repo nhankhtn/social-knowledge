@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotificationStore } from "@/store/notificationStore";
 import NotificationForm from "@/app/_sections/NotificationForm";
-import { LogOut, Settings, Bell } from "lucide-react";
+import CategoryManagement from "@/app/_sections/CategoryManagement";
+import { LogOut, Settings, Bell, Tag } from "lucide-react";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const { credentials } = useNotificationStore();
+  const [activeSection, setActiveSection] = useState<"notifications" | "categories">("notifications");
 
   return (
     <div className='min-h-screen bg-gray-50'>
@@ -48,26 +51,75 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
-        <div className='mb-8'>
-          <h2 className='text-2xl font-bold text-gray-900 mb-2'>
-            Cài đặt Thông báo
-          </h2>
-          <p className='text-gray-600'>
-            Cấu hình kênh thông báo để nhận tin tức tự động
-          </p>
+        {/* Section Tabs */}
+        <div className='mb-6'>
+          <div className='flex gap-4 border-b border-gray-200'>
+            <button
+              onClick={() => setActiveSection("notifications")}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${
+                activeSection === "notifications"
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Bell className='w-4 h-4' />
+              Thông báo
+            </button>
+            <button
+              onClick={() => setActiveSection("categories")}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${
+                activeSection === "categories"
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Tag className='w-4 h-4' />
+              Categories
+            </button>
+          </div>
         </div>
 
-        <NotificationForm />
-
-        {credentials && Object.keys(credentials).length > 0 && (
-          <div className='mt-8 bg-green-50 border border-green-200 rounded-lg p-4'>
-            <div className='flex items-center gap-2'>
-              <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></div>
-              <span className='text-sm text-green-800 font-medium'>
-                Kênh thông báo đã được cấu hình
-              </span>
+        {/* Notifications Section */}
+        {activeSection === "notifications" && (
+          <>
+            <div className='mb-8'>
+              <h2 className='text-2xl font-bold text-gray-900 mb-2'>
+                Cài đặt Thông báo
+              </h2>
+              <p className='text-gray-600'>
+                Cấu hình kênh thông báo để nhận tin tức tự động
+              </p>
             </div>
-          </div>
+
+            <NotificationForm />
+
+            {credentials && Object.keys(credentials).length > 0 && (
+              <div className='mt-8 bg-green-50 border border-green-200 rounded-lg p-4'>
+                <div className='flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></div>
+                  <span className='text-sm text-green-800 font-medium'>
+                    Kênh thông báo đã được cấu hình
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Categories Section */}
+        {activeSection === "categories" && (
+          <>
+            <div className='mb-8'>
+              <h2 className='text-2xl font-bold text-gray-900 mb-2'>
+                Categories Preferences
+              </h2>
+              <p className='text-gray-600'>
+                Chọn các categories bạn muốn theo dõi để nhận thông báo
+              </p>
+            </div>
+
+            <CategoryManagement />
+          </>
         )}
       </main>
     </div>
