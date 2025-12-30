@@ -36,12 +36,12 @@ export default function CategoryManagement() {
     const categoryIds = Array.from(selectedCategoryIds);
     try {
       await updatePreferencesMutation.mutateAsync({ category_ids: categoryIds });
-      toast.success("Cập nhật preferences thành công!");
+      toast.success("Cập nhật thành công!");
     } catch (error: any) {
       const message =
         error.formattedMessage ||
         error.response?.data?.detail ||
-        "Đã có lỗi xảy ra khi cập nhật preferences.";
+        "Đã có lỗi xảy ra.";
       toast.error(message);
     }
   };
@@ -67,10 +67,10 @@ export default function CategoryManagement() {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Chọn Categories quan tâm
+          Chọn thể loại bạn muốn theo dõi
         </h3>
         <p className="text-sm text-gray-600">
-          Chọn các categories bạn muốn theo dõi để nhận thông báo về các bài viết liên quan
+          Chọn các thể loại bạn muốn theo dõi để nhận thông báo về các bài viết liên quan
         </p>
       </div>
 
@@ -107,9 +107,9 @@ export default function CategoryManagement() {
         ) : (
           <div className="text-center py-12 text-gray-500">
             <Tag className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p>Chưa có category nào trong hệ thống.</p>
+            <p>Chưa có thể loại nào trong hệ thống.</p>
             <p className="text-sm mt-2">
-              Categories sẽ được tạo tự động khi hệ thống crawl dữ liệu.
+              Thể loại sẽ được tạo tự động khi hệ thống crawl dữ liệu.
             </p>
           </div>
         )}
@@ -119,7 +119,7 @@ export default function CategoryManagement() {
       {categories && categories.length > 0 && (
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
           <div className="text-sm text-gray-600">
-            {selectedCategoryIds.size} / {categories.length} categories đã chọn
+            {selectedCategoryIds.size} / {categories.length} thể loại đã chọn
             {hasChanges && (
               <span className="ml-2 text-amber-600 font-medium">
                 (Có thay đổi chưa lưu)
