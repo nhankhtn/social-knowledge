@@ -139,4 +139,4 @@ uv run ruff check src/
 - Scheduler tự động start khi chạy ứng dụng
 - Discord bot sẽ tự động connect khi có token
 - Database sẽ tự động được init khi start lần đầu
-- Job sẽ chạy mỗi 8 giờ, có thể config trong `.env` với `CRAWL_INTERVAL_HOURS`
+- Job sẽ chạy mỗi 8 giờ, có thể config trong `.env` với `CRAWL_AT_HOURS`

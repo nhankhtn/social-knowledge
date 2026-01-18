@@ -1,5 +1,4 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Tuple
@@ -348,12 +347,13 @@ class JobScheduler:
             asyncio.create_task(self.discord_bot.start())
             logger.info("Discord bot starting...")
         
-        # Schedule job every 8 hours
-        interval_hours = settings.crawl_interval_hours
+        trigger = CronTrigger(
+            hour=settings.crawl_at_hours,
+            minute=settings.crawl_at_minutes,
+            timezone=settings.timezone
+        )
         
-        # Use interval trigger
-        trigger = IntervalTrigger(hours=interval_hours)
-        
+        # Schedule recurring job
         self.scheduler.add_job(
             self.crawl_and_process_job,
             trigger=trigger,
@@ -363,10 +363,12 @@ class JobScheduler:
         )
         
         self.scheduler.start()
-        logger.info(f"Scheduler started. Jobs will run every {interval_hours} hours.")
+        logger.info(f"Scheduler started. Jobs will run at {settings.crawl_at_hours}:{settings.crawl_at_minutes} every day.")
     
     async def shutdown(self):
         """Shutdown the scheduler"""
-        self.scheduler.shutdown()
+        if self.scheduler.running:
+            self.scheduler.shutdown(wait=False)
+
         await self.discord_bot.close()
         logger.info("Scheduler shutdown")

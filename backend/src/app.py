@@ -90,17 +90,16 @@ def root():
         "docs": "/api/docs"
     }
 
+# def signal_handler(sig, frame):
+#     """Handle shutdown signals"""
+#     logger.info("Received shutdown signal")
+#     if scheduler:
+#         asyncio.run(scheduler.shutdown())
+#     sys.exit(0)
 
-def signal_handler(sig, frame):
-    """Handle shutdown signals"""
-    logger.info("Received shutdown signal")
-    if scheduler:
-        asyncio.run(scheduler.shutdown())
-    sys.exit(0)
 
-
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+# signal.signal(signal.SIGINT, signal_handler)
+# signal.signal(signal.SIGTERM, signal_handler)
 
 
 if __name__ == "__main__":
