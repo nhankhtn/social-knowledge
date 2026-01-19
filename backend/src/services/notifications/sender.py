@@ -44,6 +44,8 @@ class NotificationSender:
         if category_name:
             fields.append({"name": "Thể loại", "value": category_name, "inline": True})
         
+        fields.append({"name": "🔗 Link", "value": f"[Xem thêm]({url})", "inline": False})
+        
         embed = {
             "title": title[:256],
             "description": summary[:4096],

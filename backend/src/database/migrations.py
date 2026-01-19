@@ -165,6 +165,66 @@ def migrate_add_category_id_to_articles():
             raise
 
 
+def migrate_add_unique_user_provider_constraint():
+    """Add unique constraint on (user_id, provider) to notification_channels table"""
+    try:
+        with engine.connect() as conn:
+            # Check if constraint already exists
+            result = conn.execute(text("""
+                SELECT constraint_name 
+                FROM information_schema.table_constraints 
+                WHERE table_name='notification_channels' 
+                AND constraint_name='uq_user_provider'
+            """))
+            
+            if result.fetchone():
+                logger.info("Unique constraint 'uq_user_provider' already exists on notification_channels table")
+                return
+            
+            # Check for duplicate records first
+            duplicates_result = conn.execute(text("""
+                SELECT user_id, provider, COUNT(*) as count
+                FROM notification_channels
+                GROUP BY user_id, provider
+                HAVING COUNT(*) > 1
+            """))
+            
+            duplicates = duplicates_result.fetchall()
+            if duplicates:
+                logger.warning(f"Found {len(duplicates)} duplicate (user_id, provider) pairs. Keeping the most recent one for each pair.")
+                # For each duplicate pair, keep only the most recent one (by id or created_at)
+                for dup in duplicates:
+                    user_id, provider, count = dup
+                    # Delete all but the most recent one
+                    conn.execute(text("""
+                        DELETE FROM notification_channels
+                        WHERE user_id = :user_id AND provider = :provider
+                        AND id NOT IN (
+                            SELECT id FROM notification_channels
+                            WHERE user_id = :user_id AND provider = :provider
+                            ORDER BY created_at DESC, id DESC
+                            LIMIT 1
+                        )
+                    """), {"user_id": user_id, "provider": provider})
+                conn.commit()
+                logger.info("Cleaned up duplicate notification channels")
+            
+            # Add unique constraint
+            conn.execute(text("""
+                ALTER TABLE notification_channels 
+                ADD CONSTRAINT uq_user_provider UNIQUE (user_id, provider)
+            """))
+            conn.commit()
+            
+            logger.info("Successfully added unique constraint 'uq_user_provider' to notification_channels table")
+            
+    except ProgrammingError as e:
+        logger.error(f"Error adding unique constraint: {e}")
+        # If constraint already exists, that's okay
+        if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
+            raise
+
+
 def init_db_with_migrations():
     """Initialize database and run migrations"""
     from .connection import init_db
@@ -177,6 +237,7 @@ def init_db_with_migrations():
         migrate_add_slug_column()
         migrate_add_users_table()
         migrate_add_category_id_to_articles()
+        migrate_add_unique_user_provider_constraint()
     except Exception as e:
         logger.warning(f"Migration failed (might be expected if column/table already exists): {e}")
 

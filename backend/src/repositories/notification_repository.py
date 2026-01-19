@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from ..database.models import NotificationChannel
 
@@ -27,7 +27,7 @@ class NotificationRepository:
         """Get notification channel by ID"""
         return self.session.get(NotificationChannel, channel_id)
     
-    def get_by_user_id(self, user_id: int, active_only: bool = True) -> List[NotificationChannel]:
+    def get_by_user_id(self, user_id: int, active_only: bool = False) -> List[NotificationChannel]:
         """Get all notification channels for a user"""
         stmt = select(NotificationChannel).where(NotificationChannel.user_id == user_id)
         if active_only:
@@ -35,13 +35,14 @@ class NotificationRepository:
         stmt = stmt.order_by(NotificationChannel.created_at.desc())
         return list(self.session.scalars(stmt).all())
     
-    def get_by_user_and_provider(self, user_id: int, provider: str) -> Optional[NotificationChannel]:
+    def get_by_user_and_provider(self, user_id: int, provider: str, active_only: bool = False) -> Optional[NotificationChannel]:
         """Get notification channel by user ID and provider"""
         stmt = select(NotificationChannel).where(
             NotificationChannel.user_id == user_id,
-            NotificationChannel.provider == provider,
-            NotificationChannel.is_active == True
+            NotificationChannel.provider == provider
         )
+        if active_only:
+            stmt = stmt.where(NotificationChannel.is_active == True)
         return self.session.scalar(stmt)
     
     def update(self, channel_id: int, credentials: Optional[Dict[str, Any]] = None, 
@@ -60,6 +61,15 @@ class NotificationRepository:
             channel.name = name
         if is_active is not None:
             channel.is_active = is_active
+            # If activating this channel, deactivate all other channels for this user
+            if is_active:
+                from sqlalchemy import update
+                stmt = update(NotificationChannel).where(
+                    NotificationChannel.user_id == channel.user_id,
+                    NotificationChannel.id != channel_id,
+                    NotificationChannel.is_active == True
+                ).values(is_active=False)
+                self.session.execute(stmt)
         
         self.session.flush()
         return channel

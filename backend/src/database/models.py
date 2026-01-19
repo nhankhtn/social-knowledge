@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, func, JSON, Table
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, func, JSON, Table, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -126,6 +126,9 @@ class User(Base):
 class NotificationChannel(Base):
     """Model for user notification channels (webhooks, tokens, etc.)"""
     __tablename__ = "notification_channels"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'provider', name='uq_user_provider'),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)

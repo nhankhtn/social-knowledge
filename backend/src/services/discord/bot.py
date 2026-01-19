@@ -89,6 +89,7 @@ class DiscordBot:
             embed.add_field(name="Nguồn", value=source_name, inline=True)
             if category_name:
                 embed.add_field(name="Category", value=category_name, inline=True)
+            embed.add_field(name="🔗 Link", value=url, inline=False)
             embed.set_footer(text="Social Knowledge Bot")
             
             message = await channel.send(embed=embed)

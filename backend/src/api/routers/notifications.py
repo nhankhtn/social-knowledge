@@ -18,20 +18,44 @@ def create_notification_channel(
     """Create a new notification channel for user"""
     notification_repo = NotificationRepository(db)
     
-    # Check if channel with same provider already exists for this user
-    existing = notification_repo.get_by_user_and_provider(current_user.id, channel.provider)
+    # Check if channel with same provider already exists for this user (including inactive)
+    existing = notification_repo.get_by_user_and_provider(current_user.id, channel.provider, active_only=False)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Notification channel with provider '{channel.provider}' already exists for this user"
-        )
+        # If exists but inactive, reactivate and update it instead of creating new
+        # This will also deactivate other channels automatically
+        if not existing.is_active:
+            updated_channel = notification_repo.update(
+                existing.id,
+                credentials=channel.credentials,
+                name=channel.name,
+                is_active=True
+            )
+            db.commit()
+            db.refresh(updated_channel)
+            return updated_channel
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Notification channel with provider '{channel.provider}' already exists for this user"
+            )
     
+    # Create new channel and deactivate others
     new_channel = notification_repo.create(
         user_id=current_user.id,
         provider=channel.provider,
         credentials=channel.credentials,
         name=channel.name
     )
+    
+    # Deactivate all other channels for this user
+    from sqlalchemy import update
+    from ...database.models import NotificationChannel
+    stmt = update(NotificationChannel).where(
+        NotificationChannel.user_id == current_user.id,
+        NotificationChannel.id != new_channel.id,
+        NotificationChannel.is_active == True
+    ).values(is_active=False)
+    db.execute(stmt)
     
     db.commit()
     db.refresh(new_channel)
@@ -42,7 +66,7 @@ def create_notification_channel(
 @router.get("", response_model=List[NotificationChannelResponse])
 def list_notification_channels(
     current_user: User = Depends(get_current_user),
-    active_only: bool = Query(True, description="Only return active channels"),
+    active_only: bool = Query(False, description="Only return active channels"),
     db: Session = Depends(get_db)
 ):
     """Get all notification channels for user"""
@@ -100,9 +124,9 @@ def update_notification_channel(
             detail="You don't have permission to update this notification channel"
         )
     
-    # Check if new provider conflicts with existing channel
+    # Check if new provider conflicts with existing channel (including inactive)
     if channel_update.provider and channel_update.provider != channel.provider:
-        existing = notification_repo.get_by_user_and_provider(current_user.id, channel_update.provider)
+        existing = notification_repo.get_by_user_and_provider(current_user.id, channel_update.provider, active_only=False)
         if existing and existing.id != channel_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
