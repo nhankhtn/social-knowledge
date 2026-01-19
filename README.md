@@ -52,7 +52,7 @@ Chỉnh sửa `.env`:
 DATABASE_URL=postgresql://user:password@localhost:5432/social_knowledge
 GEMINI_API_KEY=your_gemini_api_key
 FIREBASE_PROJECT_ID=your_firebase_project_id
-CRAWL_INTERVAL_HOURS=8
+CRAWL_AT_HOURS=8
 ```
 
 4. **Setup PostgreSQL**:
