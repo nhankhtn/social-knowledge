@@ -20,13 +20,13 @@ export default function Dashboard() {
           <div className='flex justify-between items-center h-16'>
             <div className='flex items-center gap-2'>
               <Bell className='w-6 h-6 text-indigo-600' />
-              <h1 className='text-xl font-semibold text-gray-900'>
+              <h1 className='text-md sm:text-xl font-semibold text-gray-900'>
                 Social Knowledge
               </h1>
             </div>
-            <div className='flex items-center gap-4'>
+            <div className='flex items-center gap-2 sm:gap-4'>
               {user && (
-                <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-2 sm:gap-3'>
                   <img
                     src={user.photoURL || ""}
                     alt={user.displayName || ""}
@@ -42,7 +42,7 @@ export default function Dashboard() {
                 className='flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors'
               >
                 <LogOut className='w-4 h-4' />
-                Đăng xuất
+                <span className="hidden sm:inline">Đăng xuất</span>
               </button>
             </div>
           </div>
@@ -56,25 +56,23 @@ export default function Dashboard() {
           <div className='flex gap-4 border-b border-gray-200'>
             <button
               onClick={() => setActiveSection("notifications")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${
-                activeSection === "notifications"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${activeSection === "notifications"
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               <Bell className='w-4 h-4' />
               Thông báo
             </button>
             <button
               onClick={() => setActiveSection("categories")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${
-                activeSection === "categories"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${activeSection === "categories"
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               <Tag className='w-4 h-4' />
-              Categories
+              Thể loại
             </button>
           </div>
         </div>
@@ -111,10 +109,10 @@ export default function Dashboard() {
           <>
             <div className='mb-8'>
               <h2 className='text-2xl font-bold text-gray-900 mb-2'>
-                Categories Preferences
+                Cài đặt Thể loại
               </h2>
               <p className='text-gray-600'>
-                Chọn các categories bạn muốn theo dõi để nhận thông báo
+                Chọn các thể loại bạn muốn theo dõi để nhận thông báo
               </p>
             </div>
 

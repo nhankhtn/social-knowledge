@@ -81,7 +81,7 @@ export const useNotificationChannels = () => {
     queryKey: ["notification-channels"],
     queryFn: async () => {
       const response = await api.get<NotificationChannel[]>(
-        "/notifications?active_only=true"
+        `/notifications`
       );
       return response.data;
     },
