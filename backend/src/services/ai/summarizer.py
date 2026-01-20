@@ -35,7 +35,7 @@ class Summarizer:
             List of summary texts in the same order as input articles
         """
         return self.provider.summarize_batch(articles, max_length=max_length)
-    
+
     def classify_category(self, title: str, content: str, categories: List[Dict[str, str]]) -> Optional[str]:
         """
         Classify article into a category using AI

@@ -68,3 +68,20 @@ def get_current_user(
     
     return user
 
+
+def get_admin_user(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current authenticated user and verify they are ADMIN"""
+    user = get_current_user(request, authorization, db)
+    
+    if user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admin role required."
+        )
+    
+    return user
+

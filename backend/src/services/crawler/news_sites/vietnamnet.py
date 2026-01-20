@@ -1,5 +1,5 @@
 """
-Crawler for Báo Tuổi Trẻ (tuoitre.vn)
+Crawler for Báo VietnamNet (vietnamnet.vn)
 """
 import requests
 from bs4 import BeautifulSoup
@@ -14,8 +14,8 @@ from ..base_crawler import BaseCrawler, ArticleData
 logger = logging.getLogger(__name__)
 
 
-class TuoiTreCrawler(BaseCrawler):
-    """Crawler for Báo Tuổi Trẻ"""
+class VietnamNetCrawler(BaseCrawler):
+    """Crawler for Báo VietnamNet"""
     
     def __init__(self, source_url: str):
         super().__init__(source_url)
@@ -28,7 +28,7 @@ class TuoiTreCrawler(BaseCrawler):
         }
     
     def crawl(self) -> List[ArticleData]:
-        """Crawl articles from Tuổi Trẻ homepage"""
+        """Crawl articles from VietnamNet homepage"""
         articles = []
         
         try:
@@ -52,10 +52,10 @@ class TuoiTreCrawler(BaseCrawler):
                     logger.error(f"Error crawling article {link}: {e}")
                     continue
             
-            logger.info(f"Crawled {len(articles)} articles from Tuổi Trẻ")
+            logger.info(f"Crawled {len(articles)} articles from VietnamNet")
             
         except Exception as e:
-            logger.error(f"Error crawling Tuổi Trẻ {self.source_url}: {e}")
+            logger.error(f"Error crawling VietnamNet {self.source_url}: {e}")
         
         return articles
     
@@ -63,22 +63,25 @@ class TuoiTreCrawler(BaseCrawler):
         """Extract article links from homepage"""
         links = set()
         
-        # Find links in article cards/list items
-        # Tuổi Trẻ uses various selectors for article links
+        # VietnamNet article URLs typically end with .html or have specific patterns
+        # Find all links that look like article URLs
         selectors = [
-            "a[href*='.htm']",  # All links ending with .htm
+            "a[href*='vietnamnet.vn']",
+            "a[href*='.html']",
             ".box-category-link-title a",
             ".article-title a",
+            ".title-news a",
             "h3 a",
             "h2 a",
-            ".title-news a",
-            ".box-title-text a",
+            "[class*='article'] a",
+            "[class*='news'] a",
+            "[class*='item'] a",
         ]
         
         for selector in selectors:
             for link in soup.select(selector):
                 href = link.get("href", "")
-                if href and ".htm" in href:
+                if href:
                     # Convert relative URLs to absolute
                     if href.startswith("/"):
                         full_url = urljoin(self.base_url, href)
@@ -87,7 +90,7 @@ class TuoiTreCrawler(BaseCrawler):
                     else:
                         full_url = urljoin(self.base_url, "/" + href)
                     
-                    # Filter out non-article URLs
+                    # Filter to only VietnamNet article URLs
                     if self._is_article_url(full_url):
                         links.add(full_url)
         
@@ -95,8 +98,8 @@ class TuoiTreCrawler(BaseCrawler):
     
     def _is_article_url(self, url: str) -> bool:
         """Check if URL is an article URL"""
-        # Tuổi Trẻ article URLs typically have format: tuoitre.vn/...-YYYYMMDDHHMMSSSSS.htm
-        if not url.endswith(".htm"):
+        # Must be from vietnamnet.vn domain
+        if "vietnamnet.vn" not in url:
             return False
         
         # Exclude common non-article pages
@@ -111,26 +114,43 @@ class TuoiTreCrawler(BaseCrawler):
             "/danh-muc",
             "/tim-kiem",
             "/lien-he",
+            "/thong-tin-toa-soan",
             "/gioi-thieu",
             "/quy-dinh",
             "/chinh-sach",
+            "/premium",
+            "/video",
+            "/photo",
+            "/infographic",
+            "/comment.vietnamnet.vn",
+            "/account.vietnamnet.vn",
+            "/giamngheobenvung.vietnamnet.vn",
         ]
         
         for pattern in excluded_patterns:
             if pattern in url.lower():
                 return False
         
-        # Check if URL has article ID pattern (numbers at the end before .htm)
-        # Pattern: ...-20251229222801915.htm
-        match = re.search(r'-(\d{15,})\.htm$', url)
-        if match:
-            return True
+        # VietnamNet article URLs typically:
+        # - End with .html
+        # - Have format: vietnamnet.vn/...-id.html or vietnamnet.vn/.../...-id.html
+        # - Contain numbers (article ID) before .html
+        if url.endswith(".html"):
+            # Check if it has article ID pattern (numbers before .html)
+            match = re.search(r'-(\d+)\.html$', url)
+            if match:
+                return True
+            
+            # Also accept URLs with date-like patterns
+            if re.search(r'/\d{4}/\d{2}/\d{2}/', url):
+                return True
+            
+            # Accept if it's a reasonable article path (not too short)
+            path = urlparse(url).path
+            if len(path) > 10 and path.count("/") >= 2:
+                return True
         
-        # Also accept URLs with date-like patterns
-        if re.search(r'/\d{4}/\d{2}/\d{2}/', url):
-            return True
-        
-        return True  # Default to True if passes other checks
+        return False
     
     def _crawl_article(self, url: str) -> Optional[ArticleData]:
         """Crawl a single article page"""
@@ -168,12 +188,13 @@ class TuoiTreCrawler(BaseCrawler):
     
     def _extract_title(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract article title"""
-        # Try multiple selectors based on Tuổi Trẻ structure
+        # Try multiple selectors based on VietnamNet structure
         selectors = [
-            "h1.detail-title.article-title",
+            "h1.content-detail-title",
+            "h1.content-title",
             "h1.detail-title",
             "h1.article-title",
-            "h1[data-role='title']",
+            "h1[class*='title']",
             "h1",
             "meta[property='og:title']",
             "meta[name='title']",
@@ -188,6 +209,8 @@ class TuoiTreCrawler(BaseCrawler):
                     title = element.get_text().strip()
                 
                 if title:
+                    # Remove site name suffix if present
+                    title = re.sub(r'\s*\|\s*Báo\s+VietNamNet.*$', '', title, flags=re.IGNORECASE)
                     return self.clean_text(title)
         
         return None
@@ -195,19 +218,19 @@ class TuoiTreCrawler(BaseCrawler):
     def _extract_content(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract article content"""
         # Remove script and style elements
-        for script in soup(["script", "style", "nav", "header", "footer", "aside", "figure"]):
+        for script in soup(["script", "style", "nav", "header", "footer", "aside", "figure", "iframe"]):
             script.decompose()
         
-        # Try multiple content selectors based on Tuổi Trẻ structure
+        # Try multiple content selectors based on VietnamNet structure
         content_selectors = [
-            ".detail-content.afcbc-body",
-            ".detail-content",
-            "[data-role='content']",
+            ".main-content.content-detail",
+            ".main-content",
+            ".content-detail",
+            "[class*='content-detail']",
+            "[class*='main-content']",
             ".article-content",
             ".article-body",
             ".detail-body",
-            "[class*='detail-content']",
-            "[class*='article-content']",
             "[itemprop='articleBody']",
             "article",
             "main",
@@ -228,7 +251,8 @@ class TuoiTreCrawler(BaseCrawler):
                             # Skip common footer/header text
                             if not any(skip in text.lower() for skip in [
                                 "đọc thêm", "xem thêm", "liên quan", "tin liên quan",
-                                "bình luận", "chia sẻ", "đăng ký", "theo dõi"
+                                "bình luận", "chia sẻ", "đăng ký", "theo dõi",
+                                "video liên quan", "ảnh liên quan", "tin cùng chuyên mục"
                             ]):
                                 texts.append(text)
                     
@@ -241,7 +265,14 @@ class TuoiTreCrawler(BaseCrawler):
             main = soup.find("main") or soup.find("article") or soup.find("div", class_=re.compile("content|body|detail"))
             if main:
                 paragraphs = main.find_all("p")
-                texts = [p.get_text().strip() for p in paragraphs if p.get_text().strip() and len(p.get_text().strip()) > 10]
+                texts = []
+                for p in paragraphs:
+                    text = p.get_text().strip()
+                    if text and len(text) > 10:
+                        if not any(skip in text.lower() for skip in [
+                            "đọc thêm", "xem thêm", "liên quan", "bình luận"
+                        ]):
+                            texts.append(text)
                 if texts:
                     content = "\n\n".join(texts)
         
@@ -266,19 +297,16 @@ class TuoiTreCrawler(BaseCrawler):
                     except:
                         pass
         
-        # Try data-role="publishdate"
-        publish_date_elem = soup.find("div", {"data-role": "publishdate"})
-        if publish_date_elem:
-            date_text = publish_date_elem.get_text().strip()
-            if date_text:
+        # Try other meta tags
+        meta_date = soup.find("meta", property="article:published")
+        if meta_date:
+            date_str = meta_date.get("content", "")
+            if date_str:
                 try:
-                    # Format: "29/12/2025 22:32 GMT+7"
                     from dateutil import parser
-                    # Remove GMT+7 and parse
-                    date_text_clean = re.sub(r'\s*GMT[+-]\d+', '', date_text)
-                    return parser.parse(date_text_clean, dayfirst=True)
-                except Exception:
-                    return None
+                    return parser.parse(date_str)
+                except:
+                    pass
         
         # Try time tag
         time_tag = soup.find("time")
@@ -294,14 +322,27 @@ class TuoiTreCrawler(BaseCrawler):
                     except:
                         pass
         
+        # Try to find date in content-detail-sapo or similar
+        date_elem = soup.find("div", class_=re.compile("date|time|publish"))
+        if date_elem:
+            date_text = date_elem.get_text().strip()
+            if date_text:
+                try:
+                    from dateutil import parser
+                    # Remove common prefixes
+                    date_text_clean = re.sub(r'^(Thứ|Ngày|Đăng|Xuất bản)[:\s]+', '', date_text, flags=re.IGNORECASE)
+                    return parser.parse(date_text_clean, dayfirst=True)
+                except:
+                    pass
+        
         # Try to extract from URL if it contains date pattern
-        # Pattern: ...-20251229222801915.htm
-        match = re.search(r'-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})', url)
+        # Pattern: .../2025/01/20/... or ...-20250120-...
+        match = re.search(r'/(\d{4})/(\d{2})/(\d{2})/', url)
         if match:
             try:
-                year, month, day, hour, minute = match.groups()
-                return datetime(int(year), int(month), int(day), int(hour), int(minute))
-            except Exception:
-                return None
+                year, month, day = match.groups()
+                return datetime(int(year), int(month), int(day))
+            except:
+                pass
         
         return None

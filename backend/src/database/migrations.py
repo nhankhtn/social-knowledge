@@ -165,6 +165,37 @@ def migrate_add_category_id_to_articles():
             raise
 
 
+def migrate_add_role_to_users():
+    """Add role column to users table if it doesn't exist"""
+    try:
+        with engine.connect() as conn:
+            # Check if column exists
+            result = conn.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='role'
+            """))
+            
+            if result.fetchone():
+                logger.info("Column 'role' already exists in users table")
+                return
+            
+            # Add column with default value 'USER'
+            conn.execute(text("""
+                ALTER TABLE users 
+                ADD COLUMN role VARCHAR(20) DEFAULT 'USER' NOT NULL
+            """))
+            conn.commit()
+            
+            logger.info("Successfully added 'role' column to users table")
+            
+    except ProgrammingError as e:
+        logger.error(f"Error adding role column: {e}")
+        # If column already exists, that's okay
+        if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
+            raise
+
+
 def migrate_add_unique_user_provider_constraint():
     """Add unique constraint on (user_id, provider) to notification_channels table"""
     try:
@@ -237,6 +268,7 @@ def init_db_with_migrations():
         migrate_add_slug_column()
         migrate_add_users_table()
         migrate_add_category_id_to_articles()
+        migrate_add_role_to_users()
         migrate_add_unique_user_provider_constraint()
     except Exception as e:
         logger.warning(f"Migration failed (might be expected if column/table already exists): {e}")

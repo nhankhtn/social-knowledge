@@ -7,6 +7,7 @@ interface User {
   email: string;
   display_name?: string;
   photo_url?: string;
+  role: string;
   created_at: string;
   updated_at: string;
   last_login_at?: string;
@@ -125,3 +126,34 @@ export const useDeleteNotificationChannel = () => {
     },
   });
 };
+
+interface Article {
+  id: number;
+  url: string;
+  title: string;
+  content: string;
+  published_date?: string;
+  crawled_at: string;
+  source_id: number;
+  category_id?: number;
+}
+
+interface ArticlesParams {
+  skip?: number;
+  limit?: number;
+  source_id?: number;
+  category_id?: number;
+}
+
+export const useArticles = (params?: ArticlesParams) => {
+  return useQuery({
+    queryKey: ["articles", params],
+    queryFn: async () => {
+      const response = await api.get<Article[]>("/articles", { params });
+      return response.data;
+    },
+    enabled: false, // Only fetch when explicitly called
+  });
+};
+
+export type { User, Article };

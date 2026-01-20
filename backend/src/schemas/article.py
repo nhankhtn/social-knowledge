@@ -11,6 +11,7 @@ class ArticleResponse(BaseModel):
     published_date: Optional[datetime]
     crawled_at: datetime
     source_id: int
+    category_id: Optional[int] = None
     
     class Config:
         from_attributes = True

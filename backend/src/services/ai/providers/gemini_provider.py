@@ -123,7 +123,7 @@ Chỉ trả về JSON, không có text thêm:"""
             
         except Exception as e:
             raise Exception(f"Gemini batch API error: {str(e)}")
-    
+
     def summarize_and_classify_batch(self, articles: List[Dict[str, str]], categories: List[Dict[str, str]], max_length: int = 200) -> List[Dict[str, Optional[str]]]:
         """
         Summarize and classify categories for multiple articles in a single batch query

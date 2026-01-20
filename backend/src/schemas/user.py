@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     firebase_uid: str
+    role: str = "USER"
     created_at: datetime
     updated_at: datetime
     last_login_at: Optional[datetime] = None

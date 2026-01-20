@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.routers import sources, auth, notifications, categories
+from .api.routers import sources, auth, notifications, categories, articles
 from .database.migrations import init_db_with_migrations
 from .services.scheduler.job_scheduler import JobScheduler
 from .config.settings import settings
@@ -86,6 +86,7 @@ api_router.include_router(sources.router)
 api_router.include_router(auth.router)
 api_router.include_router(notifications.router)
 api_router.include_router(categories.router)
+api_router.include_router(articles.router)
 
 app.include_router(api_router)
 

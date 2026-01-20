@@ -5,7 +5,7 @@ import logging
 from ...database.models import Source, Article
 from ...repositories import SourceRepository
 from .rss_parser import RSSParser
-from .news_sites import ThanhNienCrawler, TuoiTreCrawler
+from .news_sites import ThanhNienCrawler, TuoiTreCrawler, VietnamNetCrawler
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,8 @@ class CrawlerService:
             return ThanhNienCrawler(source.url)
         elif slug == "bao-tuoi-tre" or slug == "tuoi-tre" or "tuoitre" in slug:
             return TuoiTreCrawler(source.url)
+        elif slug == "vietnamnet" or slug == "bao-vietnamnet" or "vietnamnet" in slug:
+            return VietnamNetCrawler(source.url)
         else:
             # Default to RSS parser
             return RSSParser(source.url)

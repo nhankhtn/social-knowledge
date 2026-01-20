@@ -112,6 +112,7 @@ class User(Base):
     email = Column(String(255), nullable=False, index=True)
     display_name = Column(String(255))
     photo_url = Column(String(500))
+    role = Column(String(20), default="USER", nullable=False)  # USER, ADMIN
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_login_at = Column(DateTime(timezone=True))

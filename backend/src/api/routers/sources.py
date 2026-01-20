@@ -4,14 +4,18 @@ from typing import List
 
 from ...repositories import SourceRepository
 from ...schemas import SourceCreate, SourceUpdate, SourceResponse
-from ...api.dependencies import get_db
+from ...api.dependencies import get_db, get_admin_user
+from ...database.models import User
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
 
 @router.get("", response_model=List[SourceResponse])
-def list_sources(db: Session = Depends(get_db)):
-    """List all sources"""
+def list_sources(
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """List all sources (Admin only)"""
     repo = SourceRepository(db)
     return repo.get_all()
 
@@ -43,7 +47,11 @@ def get_source(source_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
-def create_source(source: SourceCreate, db: Session = Depends(get_db)):
+def create_source(
+    source: SourceCreate,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
     """Create a new source"""
     repo = SourceRepository(db)
     
@@ -71,6 +79,7 @@ def create_source(source: SourceCreate, db: Session = Depends(get_db)):
 def update_source(
     source_id: int,
     source_update: SourceUpdate,
+    admin_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """Update a source"""
@@ -112,7 +121,11 @@ def update_source(
 
 
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_source(source_id: int, db: Session = Depends(get_db)):
+def delete_source(
+    source_id: int,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
     """Delete a source"""
     repo = SourceRepository(db)
     

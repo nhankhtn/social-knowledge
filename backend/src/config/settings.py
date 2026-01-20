@@ -9,9 +9,6 @@ class Settings(BaseSettings):
     # AI Service - Gemini
     gemini_api_key: str
     
-    # Firebase (optional - for token verification)
-    firebase_project_id: Optional[str] = None
-    
     # Discord
     discord_bot_token: Optional[str] = None
     discord_channel_id: Optional[str] = None
