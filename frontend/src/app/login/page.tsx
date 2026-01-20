@@ -6,10 +6,12 @@ import { useAuthStore } from "@/store/authStore";
 import LoginForm from "@/app/login/_sections/LoginForm";
 import { paths } from "@/paths";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageTracking } from "@/hooks/usePageTracking";
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  usePageTracking();
 
   useEffect(() => {
     if (!loading && user) {

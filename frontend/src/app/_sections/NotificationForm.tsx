@@ -10,6 +10,7 @@ import {
   useNotificationChannels,
 } from "@/hooks/useUser";
 import { toast } from "react-toastify";
+import { trackNotificationChannelSetup } from "@/lib/analytics";
 
 type NotificationFormData = {
   provider: "discord_webhook" | "telegram_bot" | "slack_webhook";
@@ -137,12 +138,18 @@ export default function NotificationForm() {
             is_active: values.is_active ?? true,
           },
         });
+        trackNotificationChannelSetup(
+          values.provider,
+          values.is_active ? "activate" : "deactivate"
+        );
+        trackNotificationChannelSetup(values.provider, "update");
       } else {
         await createChannelMutation.mutateAsync({
           provider: values.provider,
           credentials: creds,
           name: `${values.provider} notification`,
         });
+        trackNotificationChannelSetup(values.provider, "create");
       }
 
       await refetch();

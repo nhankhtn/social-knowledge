@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useCategories, useUserCategories, useUpdateUserCategories } from "@/hooks/useCategories";
 import { Tag, CheckCircle2, Circle, Save } from "lucide-react";
 import { toast } from "react-toastify";
+import { trackCategorySelection } from "@/lib/analytics";
 
 export default function CategoryManagement() {
   const { data: categories, isLoading } = useCategories();
@@ -23,11 +24,13 @@ export default function CategoryManagement() {
   const handleTogglePreference = (categoryId: number) => {
     setSelectedCategoryIds((prev) => {
       const newSet = new Set(prev);
+      const action = newSet.has(categoryId) ? "deselect" : "select";
       if (newSet.has(categoryId)) {
         newSet.delete(categoryId);
       } else {
         newSet.add(categoryId);
       }
+      trackCategorySelection([categoryId], action);
       return newSet;
     });
   };
@@ -36,6 +39,7 @@ export default function CategoryManagement() {
     const categoryIds = Array.from(selectedCategoryIds);
     try {
       await updatePreferencesMutation.mutateAsync({ category_ids: categoryIds });
+      trackCategorySelection(categoryIds, "save");
       toast.success("Cập nhật thành công!");
     } catch (error: any) {
       const message =

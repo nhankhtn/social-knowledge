@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/app/_sections/Dashboard";
 import { paths } from "@/paths";
+import { usePageTracking } from "@/hooks/usePageTracking";
 
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  usePageTracking();
 
   useEffect(() => {
     if (!loading && !user) {

@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     
+    # Swagger UI Authentication
+    swagger_username: str = "admin"
+    swagger_password: str = "1012"
+    
+    # Rate Limiting
+    rate_limit_per_minute: int = 30  # Requests per minute per user/IP
+    rate_limit_enabled: bool = True
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

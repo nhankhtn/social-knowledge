@@ -1,6 +1,7 @@
 "use client";
 
 import { Auth } from "firebase/auth";
+import { Analytics } from "firebase/analytics";
 import {
   FIREBASE_API_KEY,
   FIREBASE_AUTH_DOMAIN,
@@ -14,13 +15,16 @@ import { FirebaseApp } from "firebase/app";
 let firebaseApp: FirebaseApp;
 
 let auth: Auth;
+let analytics: Analytics | null = null;
 let fbApp: typeof import("firebase/app");
 let fbAuth: typeof import("firebase/auth");
+let fbAnalytics: typeof import("firebase/analytics");
 
 export const initializeFirebase = async () => {
-  [fbApp, fbAuth] = await Promise.all([
+  [fbApp, fbAuth, fbAnalytics] = await Promise.all([
     import("firebase/app"),
     import("firebase/auth"),
+    import("firebase/analytics"),
   ]);
   firebaseApp = fbApp.initializeApp({
     apiKey: FIREBASE_API_KEY,
@@ -31,9 +35,19 @@ export const initializeFirebase = async () => {
     appId: FIREBASE_APP_ID,
   });
   auth = fbAuth.getAuth(firebaseApp);
+
+  // Initialize Analytics only in browser environment
+  if (typeof window !== "undefined") {
+    try {
+      analytics = fbAnalytics.getAnalytics(firebaseApp);
+    } catch (error) {
+      console.warn("Firebase Analytics initialization failed:", error);
+      analytics = null;
+    }
+  }
 };
 
-export { firebaseApp, auth };
+export { firebaseApp, auth, analytics };
 
 export const errorMap: { [name: string]: string } = {
   "auth/admin-restricted-operation":

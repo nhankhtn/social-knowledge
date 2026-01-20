@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { paths } from "@/paths";
 import { useLogin } from "./useUser";
 import { handleAuthError } from "@/utils/auth";
+import { trackLogin, trackLogout, setAnalyticsUserId, setAnalyticsUserProperties } from "@/lib/analytics";
 
 export const useAuth = () => {
   const [user, loading, error] = useAuthState(auth);
@@ -17,6 +18,17 @@ export const useAuth = () => {
   useEffect(() => {
     setUser(user || null);
     setLoading(loading);
+
+    // Set analytics user ID and properties when user changes
+    if (user) {
+      setAnalyticsUserId(user.uid);
+      setAnalyticsUserProperties({
+        email: user.email || undefined,
+        display_name: user.displayName || undefined,
+      });
+    } else {
+      setAnalyticsUserId(null);
+    }
   }, [user, loading]);
 
   const loginWithGoogle = async () => {
@@ -40,6 +52,7 @@ export const useAuth = () => {
         });
 
         console.log("User logged in successfully");
+        trackLogin("google");
         return result.user;
       } catch (apiError: any) {
         // Sign out from Firebase since backend registration failed
@@ -53,6 +66,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
+      trackLogout();
       await signOut(auth);
       logoutStore();
       router.push(paths.login);

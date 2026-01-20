@@ -2,6 +2,7 @@ import axios from "axios";
 import { auth } from "@/lib/firebase";
 import { API_URL } from "@/constants/env";
 import { paths } from "@/paths";
+import { trackError } from "@/lib/analytics";
 
 const api = axios.create({
   baseURL: API_URL,
@@ -82,6 +83,15 @@ api.interceptors.response.use(
     // Format error message before rejecting
     if (error.response?.data) {
       error.formattedMessage = formatErrorMessage(error);
+    }
+
+    // Track API errors (skip 401 as they're handled separately)
+    if (error.response?.status && error.response.status !== 401) {
+      trackError(
+        `API_ERROR_${error.response.status}`,
+        error.formattedMessage || error.message,
+        error.stack
+      );
     }
 
     // If 401 and haven't retried yet, try to refresh token

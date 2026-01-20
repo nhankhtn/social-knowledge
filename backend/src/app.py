@@ -13,6 +13,7 @@ from .api.routers import sources, auth, notifications, categories
 from .database.migrations import init_db_with_migrations
 from .services.scheduler.job_scheduler import JobScheduler
 from .config.settings import settings
+from .middleware import SwaggerAuthMiddleware, RateLimitMiddleware
 
 # Setup logging
 logging.basicConfig(
@@ -72,6 +73,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add Swagger authentication middleware
+app.add_middleware(SwaggerAuthMiddleware)
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
 api_router = APIRouter(prefix="/api/v1")
 
 # Include API routes
@@ -87,7 +94,7 @@ def root():
     return {
         "message": "Social Knowledge API",
         "version": "0.1.0",
-        "docs": "/api/docs"
+        "docs": "/docs"
     }
 
 # def signal_handler(sig, frame):
