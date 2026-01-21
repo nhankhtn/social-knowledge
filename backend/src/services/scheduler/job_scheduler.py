@@ -35,7 +35,7 @@ class JobScheduler:
         logger.info(f"Crawled {total_crawled} new articles")
         return total_crawled
     
-    def _get_articles_to_process(self, db: Session, limit: int = 10) -> List[Article]:
+    def _get_articles_to_process(self, db: Session) -> List[Article]:
         """Step 2: Get new articles without summaries (from last 24 hours)"""
         logger.info("Step 2: Getting articles to process...")
         one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
@@ -44,7 +44,7 @@ class JobScheduler:
                 db.query(Summary.article_id).distinct()
             ),
             Article.crawled_at >= one_day_ago
-        ).limit(limit).all()
+        ).all()
         
         logger.info(f"Found {len(new_articles)} articles to process")
         return new_articles
@@ -124,7 +124,7 @@ class JobScheduler:
         
         processed_count = 0
         
-        for idx, article in enumerate(batch_articles):
+        for idx, article in enumerate[Article](batch_articles):
             try:
                 result = results[idx] if idx < len(results) else {'summary': '', 'category_slug': None}
                 summary_text = result.get('summary', '')
@@ -320,7 +320,7 @@ class JobScheduler:
                 self._crawl_articles(db)
                 
                 # Step 2: Get articles to process
-                new_articles = self._get_articles_to_process(db, limit=10)
+                new_articles = self._get_articles_to_process(db)
                 
                 if not new_articles:
                     logger.info("No articles to process")

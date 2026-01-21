@@ -10,6 +10,7 @@ import re
 from urllib.parse import urlparse, urljoin
 
 from ..base_crawler import BaseCrawler, ArticleData
+from ....config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,8 @@ class VietnamNetCrawler(BaseCrawler):
             logger.info(f"Found {len(article_links)} article links on homepage")
             
             # Crawl each article
-            for link in article_links[:20]:  # Limit to 20 articles per crawl
+            limit = settings.crawl_articles_limit
+            for link in article_links[:limit]:
                 try:
                     article = self._crawl_article(link)
                     if article:

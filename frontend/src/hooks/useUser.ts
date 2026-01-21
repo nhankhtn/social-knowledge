@@ -127,6 +127,18 @@ export const useDeleteNotificationChannel = () => {
   });
 };
 
+interface CategoryInfo {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+interface SourceInfo {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface Article {
   id: number;
   url: string;
@@ -136,6 +148,8 @@ interface Article {
   crawled_at: string;
   source_id: number;
   category_id?: number;
+  category?: CategoryInfo | null;
+  source?: SourceInfo | null;
 }
 
 interface ArticlesParams {
@@ -143,6 +157,7 @@ interface ArticlesParams {
   limit?: number;
   source_id?: number;
   category_id?: number;
+  search?: string;
 }
 
 export const useArticles = (params?: ArticlesParams) => {
@@ -152,7 +167,6 @@ export const useArticles = (params?: ArticlesParams) => {
       const response = await api.get<Article[]>("/articles", { params });
       return response.data;
     },
-    enabled: false, // Only fetch when explicitly called
   });
 };
 

@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # AI Batch Processing
     summary_batch_size: int = 5  # Number of articles per batch for summarization
     
+    # Crawler Settings
+    crawl_articles_limit: int = 30  # Maximum number of articles to crawl per source per run
+    
     # Logging
     log_level: str = "INFO"
     

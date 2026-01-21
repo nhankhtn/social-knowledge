@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 from typing import List, Optional
 
 from ...schemas.article import ArticleResponse
@@ -17,9 +18,13 @@ def list_articles(
     limit: int = Query(100, ge=1, le=1000),
     source_id: Optional[int] = Query(None),
     category_id: Optional[int] = Query(None),
+    search: Optional[str] = Query(None, description="Search in title and content"),
 ):
     """List all articles (Admin only)"""
-    query = db.query(Article)
+    query = db.query(Article).options(
+        joinedload(Article.category),
+        joinedload(Article.source)
+    )
     
     if source_id:
         query = query.filter(Article.source_id == source_id)
@@ -27,6 +32,15 @@ def list_articles(
     if category_id:
         query = query.filter(Article.category_id == category_id)
     
-    articles = query.order_by(Article.published_date.desc()).offset(skip).limit(limit).all()
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                Article.title.ilike(search_term),
+                Article.content.ilike(search_term)
+            )
+        )
+    
+    articles = query.order_by(Article.crawled_at.desc()).offset(skip).limit(limit).all()
     
     return articles
