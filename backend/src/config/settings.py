@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     discord_channel_id: Optional[str] = None
     
     # Scheduler
-    crawl_at_hours: str = "0,8,16"
+    crawl_at_hours: str = "8,17"  # Crawl at 8h and 17h daily
     crawl_at_minutes: str = "0"
     timezone: str = "Asia/Ho_Chi_Minh"
     

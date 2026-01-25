@@ -18,6 +18,7 @@ type NotificationFormData = {
   token?: string;
   chatId?: string;
   is_active: boolean;
+  notification_hours: number[];
 };
 
 export default function NotificationForm() {
@@ -96,6 +97,7 @@ export default function NotificationForm() {
         token: currentChannel.credentials?.token || "",
         chatId: currentChannel.credentials?.chat_id || "",
         is_active: currentChannel.is_active ?? false,
+        notification_hours: currentChannel.notification_hours || [],
       };
     }
     return {
@@ -104,6 +106,7 @@ export default function NotificationForm() {
       token: credentials?.token || "",
       chatId: credentials?.chat_id || "",
       is_active: false,
+      notification_hours: [],
     };
   };
 
@@ -136,6 +139,7 @@ export default function NotificationForm() {
             provider: values.provider,
             credentials: creds,
             is_active: values.is_active ?? true,
+            notification_hours: values.notification_hours,
           },
         });
         trackNotificationChannelSetup(
@@ -148,6 +152,7 @@ export default function NotificationForm() {
           provider: values.provider,
           credentials: creds,
           name: `${values.provider} notification`,
+          notification_hours: values.notification_hours,
         });
         trackNotificationChannelSetup(values.provider, "create");
       }
@@ -225,6 +230,14 @@ export default function NotificationForm() {
       >
         {({ values, isSubmitting, setFieldValue }: any) => {
           const currentProvider = values.provider || selectedProvider;
+
+          const handleHourToggle = (hour: number) => {
+            const currentHours = values.notification_hours || [];
+            const newHours = currentHours.includes(hour)
+              ? currentHours.filter((h: number) => h !== hour)
+              : [...currentHours, hour].sort((a: number, b: number) => a - b);
+            setFieldValue('notification_hours', newHours);
+          };
 
           return (
             <Form className='space-y-6'>
@@ -466,6 +479,41 @@ export default function NotificationForm() {
                   </p>
                 </div>
               )}
+
+              {/* Notification Hours Selection */}
+              <div className='p-4 bg-gray-50 rounded-lg'>
+                <div className='mb-3'>
+                  <label className='block text-sm font-medium text-gray-700 mb-1'>
+                    Giờ nhận thông báo
+                  </label>
+                  <p className='text-sm text-gray-500'>
+                    Chọn các giờ trong ngày (0-23h) để nhận thông báo. Để trống để nhận mọi lúc.
+                  </p>
+                </div>
+                <div className='grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-2'>
+                  {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
+                    const isSelected = (values.notification_hours || []).includes(hour);
+                    return (
+                      <button
+                        key={hour}
+                        type='button'
+                        onClick={() => handleHourToggle(hour)}
+                        className={`relative flex items-center justify-center p-2 border rounded-lg cursor-pointer transition-colors ${isSelected
+                          ? 'bg-indigo-50 border-indigo-600 text-indigo-600 font-semibold'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                      >
+                        <span className='text-sm'>{hour}h</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {values.notification_hours && values.notification_hours.length > 0 && (
+                  <p className='mt-3 text-sm text-gray-600'>
+                    Đã chọn: {values.notification_hours.sort((a: number, b: number) => a - b).join('h, ')}h
+                  </p>
+                )}
+              </div>
 
               {/* Active Toggle */}
               <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg'>

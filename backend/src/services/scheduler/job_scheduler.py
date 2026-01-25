@@ -12,7 +12,7 @@ from ..crawler.service import CrawlerService
 from ..ai.summarizer import Summarizer
 from ..discord.bot import DiscordBot
 from ..notifications.sender import NotificationSender
-from ...database.models import Article, Summary, DiscordMessage, User, NotificationChannel, Category
+from ...database.models import Article, Summary, DiscordMessage, User, NotificationChannel, Category, ArticleNotification
 from ...repositories import CategoryRepository
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class JobScheduler:
     
     def __init__(self):
         self.scheduler = AsyncIOScheduler(timezone=settings.timezone)
-        self.discord_bot = DiscordBot()
+        # self.discord_bot = DiscordBot()
         self.summarizer = Summarizer()
         self.notification_sender = NotificationSender()
     
@@ -149,29 +149,29 @@ class JobScheduler:
                 db.refresh(article, ['category'])
                 
                 # Send notifications to users who have this category in preferences
-                for user in active_users:
-                    # Check if user should receive this article
-                    if not self._should_send_to_user(article, user):
-                        continue
+                # for user in active_users:
+                #     # Check if user should receive this article
+                #     if not self._should_send_to_user(article, user):
+                #         continue
                     
-                    for channel in user.notification_channels:
-                        if not channel.is_active:
-                            continue
+                #     for channel in user.notification_channels:
+                #         if not channel.is_active:
+                #             continue
                         
-                        try:
-                            category_name = article.category.name if article.category else None
-                            await self.notification_sender.send(
-                                provider=channel.provider,
-                                credentials=channel.credentials,
-                                title=article.title,
-                                summary=summary_text,
-                                url=article.url,
-                                source_name=article.source.name,
-                                category_name=category_name
-                            )
-                            logger.info(f"Sent to user {user.id} via {channel.provider} (category: {category_name or 'none'})")
-                        except Exception as e:
-                            logger.error(f"Failed to send to user {user.id} channel {channel.id}: {e}")
+                #         try:
+                #             category_name = article.category.name if article.category else None
+                #             await self.notification_sender.send(
+                #                 provider=channel.provider,
+                #                 credentials=channel.credentials,
+                #                 title=article.title,
+                #                 summary=summary_text,
+                #                 url=article.url,
+                #                 source_name=article.source.name,
+                #                 category_name=category_name
+                #             )
+                #             logger.info(f"Sent to user {user.id} via {channel.provider} (category: {category_name or 'none'})")
+                #         except Exception as e:
+                #             logger.error(f"Failed to send to user {user.id} channel {channel.id}: {e}")
                 
                 logger.info(f"Processed article: {article.title[:50]}...")
                 processed_count += 1
@@ -218,30 +218,8 @@ class JobScheduler:
             # Refresh article to load category relationship
             db.refresh(article, ['category'])
             
-            # Send notifications
-            for user in active_users:
-                # Check if user should receive this article
-                if not self._should_send_to_user(article, user):
-                    continue
-                
-                for channel in user.notification_channels:
-                    if not channel.is_active:
-                        continue
-                    
-                    try:
-                        category_name = article.category.name if article.category else None
-                        await self.notification_sender.send(
-                            provider=channel.provider,
-                            credentials=channel.credentials,
-                            title=article.title,
-                            summary=summary_text,
-                            url=article.url,
-                            source_name=article.source.name,
-                            category_name=category_name
-                        )
-                        logger.info(f"Sent to user {user.id} via {channel.provider} (category: {category_name or 'none'})")
-                    except Exception as e:
-                        logger.error(f"Failed to send notification: {e}")
+            # Note: Notifications will be sent by the separate notification job
+            # This job only crawls and processes articles
             
             return True
             
@@ -311,7 +289,7 @@ class JobScheduler:
             return total_processed
     
     async def crawl_and_process_job(self):
-        """Main job: crawl, summarize, classify, and send notifications"""
+        """Crawl job: crawl, summarize, and classify articles (no notifications)"""
         logger.info("Starting crawl and process job...")
         
         try:
@@ -326,13 +304,12 @@ class JobScheduler:
                     logger.info("No articles to process")
                     return
                 
-                # Get categories and active users
+                # Get categories
                 all_categories, categories_data = self._get_categories_data(db)
-                active_users = self._get_active_users(db)
                 
-                # Step 3: Process articles
+                # Step 3: Process articles (summarize and classify only, no notifications)
                 total_processed = await self._process_articles(
-                    db, new_articles, all_categories, categories_data, active_users
+                    db, new_articles, all_categories, categories_data, []
                 )
                 
                 logger.info(f"Crawl and process job completed. Processed {total_processed} articles.")
@@ -340,12 +317,136 @@ class JobScheduler:
         except Exception as e:
             logger.error(f"Error in crawl and process job: {e}")
     
+    def _get_articles_to_send(self, db: Session, user: User, channel: NotificationChannel) -> List[Article]:
+        """Get articles that should be sent to user via channel but haven't been sent yet"""
+        from sqlalchemy import and_, not_
+        
+        # Get articles with summaries
+        query = db.query(Article).join(Summary).filter(
+            Summary.article_id == Article.id
+        )
+        
+        # Filter by user's category preferences
+        if user.category_preferences and len(user.category_preferences) > 0:
+            user_category_ids = [cat.id for cat in user.category_preferences]
+            query = query.filter(
+                (Article.category_id.in_(user_category_ids)) | (Article.category_id.is_(None))
+            )
+        # If no preferences, send all articles
+        
+        # Exclude articles already sent to this user via this channel
+        sent_article_ids_subquery = db.query(ArticleNotification.article_id).filter(
+            and_(
+                ArticleNotification.user_id == user.id,
+                ArticleNotification.channel_id == channel.id
+            )
+        )
+        
+        query = query.filter(~Article.id.in_(sent_article_ids_subquery))
+        
+        # Order by crawled_at desc to get newest first
+        articles = query.order_by(Article.crawled_at.desc()).limit(10).all()
+        
+        return articles
+    
+    async def send_notifications_job(self):
+        """Notification job: send notifications to users based on their notification hours"""
+        logger.info("Starting send notifications job...")
+        
+        current_hour = datetime.now(settings.timezone).hour
+        logger.info(f"Current hour: {current_hour}")
+        
+        try:
+            with get_db_session() as db:
+                # Get all active users with active notification channels
+                active_users = self._get_active_users(db)
+                
+                if not active_users:
+                    logger.info("No active users with notification channels")
+                    return
+                
+                total_sent = 0
+                
+                for user in active_users:
+                    for channel in user.notification_channels:
+                        if not channel.is_active:
+                            continue
+                        
+                        # Check if notification should be sent at current hour
+                        if channel.notification_hours and len(channel.notification_hours) > 0:
+                            if current_hour not in channel.notification_hours:
+                                logger.debug(f"Skipping user {user.id} channel {channel.id} - current hour {current_hour} not in notification_hours {channel.notification_hours}")
+                                continue
+                        
+                        # Get articles to send to this user via this channel
+                        articles_to_send = self._get_articles_to_send(db, user, channel)
+                        
+                        if not articles_to_send:
+                            logger.debug(f"No new articles to send to user {user.id} via channel {channel.id}")
+                            continue
+                        
+                        logger.info(f"Sending {len(articles_to_send)} articles to user {user.id} via {channel.provider}")
+                        
+                        for article in articles_to_send:
+                            try:
+                                # Get summary for this article
+                                summary = db.query(Summary).filter(
+                                    Summary.article_id == article.id
+                                ).first()
+                                
+                                if not summary:
+                                    logger.warning(f"No summary found for article {article.id}, skipping")
+                                    continue
+                                
+                                # Refresh article to load relationships
+                                db.refresh(article, ['category', 'source'])
+                                
+                                category_name = article.category.name if article.category else None
+                                
+                                # Send notification
+                                await self.notification_sender.send(
+                                    provider=channel.provider,
+                                    credentials=channel.credentials,
+                                    title=article.title,
+                                    summary=summary.summary_text,
+                                    url=article.url,
+                                    source_name=article.source.name if article.source else "Unknown",
+                                    category_name=category_name
+                                )
+                                
+                                # Record that this article was sent to this user via this channel
+                                notification_record = ArticleNotification(
+                                    article_id=article.id,
+                                    user_id=user.id,
+                                    channel_id=channel.id
+                                )
+                                db.add(notification_record)
+                                
+                                total_sent += 1
+                                logger.info(f"Sent article {article.id} to user {user.id} via {channel.provider}")
+                                
+                            except Exception as e:
+                                logger.error(f"Failed to send article {article.id} to user {user.id} channel {channel.id}: {e}")
+                                continue
+                        
+                        # Commit notifications for this user/channel
+                        try:
+                            db.commit()
+                        except Exception as e:
+                            logger.error(f"Error committing notifications for user {user.id} channel {channel.id}: {e}")
+                            db.rollback()
+                
+                logger.info(f"Send notifications job completed. Sent {total_sent} notifications.")
+                
+        except Exception as e:
+            logger.error(f"Error in send notifications job: {e}")
+    
     async def start(self):
         """Start the scheduler and Discord bot"""
         # Start Discord bot
-        if self.discord_bot.token:
-            asyncio.create_task(self.discord_bot.start())
-            logger.info("Discord bot starting...")
+        # if self.discord_bot.token:
+        #     asyncio.create_task(self.discord_bot.start())
+        #     logger.info("Discord bot starting...")
         
         trigger = CronTrigger(
             hour=settings.crawl_at_hours,
@@ -361,14 +462,30 @@ class JobScheduler:
             name="Crawl and Process News",
             replace_existing=True
         )
+
+          # Schedule notification job to run every hour
+        notification_trigger = CronTrigger(
+            minute=0,
+            timezone=settings.timezone
+        )
+        
+        self.scheduler.add_job(
+            self.send_notifications_job,
+            trigger=notification_trigger,
+            id="send_notifications",
+            name="Send Notifications",
+            replace_existing=True
+        )
+        logger.info("Scheduled notification job to run every hour")
         
         self.scheduler.start()
-        logger.info(f"Scheduler started. Jobs will run at {settings.crawl_at_hours}:{settings.crawl_at_minutes} every day.")
+        logger.info(f"Scheduler started. Crawl jobs will run at {settings.crawl_at_hours}:{settings.crawl_at_minutes} every day.")
+        logger.info("Notification job will run every hour to send pending notifications.")
     
     async def shutdown(self):
         """Shutdown the scheduler"""
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
 
-        await self.discord_bot.close()
+        # await self.discord_bot.close()
         logger.info("Scheduler shutdown")

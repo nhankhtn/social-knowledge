@@ -7,6 +7,7 @@ class NotificationChannelBase(BaseModel):
     provider: str  # discord_webhook, telegram_bot, slack_webhook, line_notify, etc.
     credentials: Dict[str, Any]  # Flexible: {"url": "..."} or {"token": "...", "chat_id": "..."}
     name: Optional[str] = None
+    notification_hours: Optional[list[int]] = None  # List of hours (0-23) when notifications should be sent
 
 
 class NotificationChannelCreate(NotificationChannelBase):
@@ -18,6 +19,7 @@ class NotificationChannelUpdate(BaseModel):
     credentials: Optional[Dict[str, Any]] = None
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    notification_hours: Optional[list[int]] = None  # List of hours (0-23) when notifications should be sent
 
 
 class NotificationChannelResponse(NotificationChannelBase):

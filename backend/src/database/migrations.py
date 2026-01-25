@@ -256,6 +256,91 @@ def migrate_add_unique_user_provider_constraint():
             raise
 
 
+def migrate_add_notification_hours():
+    """Add notification_hours column to notification_channels table if it doesn't exist"""
+    try:
+        with engine.connect() as conn:
+            # Check if column exists
+            result = conn.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='notification_channels' AND column_name='notification_hours'
+            """))
+            
+            if result.fetchone():
+                logger.info("Column 'notification_hours' already exists in notification_channels table")
+                return
+            
+            # Add column as nullable JSON
+            conn.execute(text("""
+                ALTER TABLE notification_channels 
+                ADD COLUMN notification_hours JSON
+            """))
+            conn.commit()
+            
+            logger.info("Successfully added 'notification_hours' column to notification_channels table")
+            
+    except ProgrammingError as e:
+        logger.error(f"Error adding notification_hours column: {e}")
+        # If column already exists, that's okay
+        if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
+            raise
+
+
+def migrate_add_article_notifications_table():
+    """Create article_notifications table if it doesn't exist"""
+    try:
+        with engine.connect() as conn:
+            # Check if table exists
+            result = conn.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name='article_notifications'
+            """))
+            
+            if result.fetchone():
+                logger.info("Table 'article_notifications' already exists")
+                return
+            
+            # Create table
+            conn.execute(text("""
+                CREATE TABLE article_notifications (
+                    id SERIAL PRIMARY KEY,
+                    article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    channel_id INTEGER NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE,
+                    sent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                    CONSTRAINT uq_article_user_channel UNIQUE (article_id, user_id, channel_id)
+                )
+            """))
+            
+            # Create indexes
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_article_notifications_article_id 
+                ON article_notifications(article_id)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_article_notifications_user_id 
+                ON article_notifications(user_id)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_article_notifications_channel_id 
+                ON article_notifications(channel_id)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_article_notifications_sent_at 
+                ON article_notifications(sent_at)
+            """))
+            
+            conn.commit()
+            logger.info("Successfully created 'article_notifications' table")
+            
+    except ProgrammingError as e:
+        logger.error(f"Error creating article_notifications table: {e}")
+        if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
+            raise
+
+
 def init_db_with_migrations():
     """Initialize database and run migrations"""
     from .connection import init_db
@@ -270,6 +355,8 @@ def init_db_with_migrations():
         migrate_add_category_id_to_articles()
         migrate_add_role_to_users()
         migrate_add_unique_user_provider_constraint()
+        migrate_add_notification_hours()
+        migrate_add_article_notifications_table()
     except Exception as e:
         logger.warning(f"Migration failed (might be expected if column/table already exists): {e}")
 

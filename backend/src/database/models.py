@@ -139,6 +139,10 @@ class NotificationChannel(Base):
     # Flexible credentials - store as JSON
     credentials = Column(JSON, nullable=False)  
     
+    # Notification hours (0-23) - store as JSON array, e.g. [0, 8, 16]
+    # If null or empty, notifications will be sent at any time
+    notification_hours = Column(JSON, nullable=True)
+    
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -147,4 +151,25 @@ class NotificationChannel(Base):
     
     def __repr__(self):
         return f"<NotificationChannel(id={self.id}, user_id={self.user_id}, provider='{self.provider}')>"
+
+
+class ArticleNotification(Base):
+    """Model to track which articles have been sent to which users"""
+    __tablename__ = "article_notifications"
+    __table_args__ = (
+        UniqueConstraint('article_id', 'user_id', 'channel_id', name='uq_article_user_channel'),
+    )
+    
+    id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, ForeignKey("articles.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    channel_id = Column(Integer, ForeignKey("notification_channels.id", ondelete="CASCADE"), nullable=False, index=True)
+    sent_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    article = relationship("Article")
+    user = relationship("User")
+    channel = relationship("NotificationChannel")
+    
+    def __repr__(self):
+        return f"<ArticleNotification(id={self.id}, article_id={self.article_id}, user_id={self.user_id}, channel_id={self.channel_id})>"
 

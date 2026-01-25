@@ -11,13 +11,14 @@ class NotificationRepository:
     def __init__(self, session: Session):
         self.session = session
     
-    def create(self, user_id: int, provider: str, credentials: Dict[str, Any], name: Optional[str] = None) -> NotificationChannel:
+    def create(self, user_id: int, provider: str, credentials: Dict[str, Any], name: Optional[str] = None, notification_hours: Optional[List[int]] = None) -> NotificationChannel:
         """Create a new notification channel"""
         channel = NotificationChannel(
             user_id=user_id,
             provider=provider,
             credentials=credentials,
-            name=name
+            name=name,
+            notification_hours=notification_hours
         )
         self.session.add(channel)
         self.session.flush()
@@ -47,7 +48,7 @@ class NotificationRepository:
     
     def update(self, channel_id: int, credentials: Optional[Dict[str, Any]] = None, 
                provider: Optional[str] = None, name: Optional[str] = None, 
-               is_active: Optional[bool] = None) -> Optional[NotificationChannel]:
+               is_active: Optional[bool] = None, notification_hours: Optional[List[int]] = None) -> Optional[NotificationChannel]:
         """Update notification channel"""
         channel = self.get_by_id(channel_id)
         if not channel:
@@ -59,6 +60,8 @@ class NotificationRepository:
             channel.provider = provider
         if name is not None:
             channel.name = name
+        if notification_hours is not None:
+            channel.notification_hours = notification_hours
         if is_active is not None:
             channel.is_active = is_active
             # If activating this channel, deactivate all other channels for this user

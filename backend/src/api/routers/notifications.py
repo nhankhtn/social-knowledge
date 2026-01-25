@@ -28,6 +28,7 @@ def create_notification_channel(
                 existing.id,
                 credentials=channel.credentials,
                 name=channel.name,
+                notification_hours=channel.notification_hours,
                 is_active=True
             )
             db.commit()
@@ -44,7 +45,8 @@ def create_notification_channel(
         user_id=current_user.id,
         provider=channel.provider,
         credentials=channel.credentials,
-        name=channel.name
+        name=channel.name,
+        notification_hours=channel.notification_hours
     )
     
     # Deactivate all other channels for this user
@@ -138,7 +140,8 @@ def update_notification_channel(
         credentials=channel_update.credentials,
         provider=channel_update.provider,
         name=channel_update.name,
-        is_active=channel_update.is_active
+        is_active=channel_update.is_active,
+        notification_hours=channel_update.notification_hours
     )
     
     db.commit()

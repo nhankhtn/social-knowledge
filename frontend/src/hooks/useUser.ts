@@ -32,6 +32,7 @@ interface NotificationChannel {
   credentials: Record<string, any>;
   name?: string;
   is_active: boolean;
+  notification_hours?: number[];
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +41,7 @@ interface CreateNotificationChannelData {
   provider: string;
   credentials: Record<string, any>;
   name?: string;
+  notification_hours?: number[];
 }
 
 interface UpdateNotificationChannelData {
@@ -47,6 +49,7 @@ interface UpdateNotificationChannelData {
   credentials?: Record<string, any>;
   name?: string;
   is_active?: boolean;
+  notification_hours?: number[];
 }
 
 export const useLogin = () => {
