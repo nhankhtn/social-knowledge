@@ -2,19 +2,22 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-// import { useGetUser } from "@/hooks/useUser";
+import { useGetUser } from "@/hooks/useUser";
 import { useNotificationStore } from "@/store/notificationStore";
 import NotificationForm from "@/app/_sections/NotificationForm";
 import CategoryManagement from "@/app/_sections/CategoryManagement";
 import ArticlesList from "@/app/_sections/ArticlesList";
-import { LogOut, Bell, Tag, FileText } from "lucide-react";
+import SentSummariesList from "@/app/_sections/SentSummariesList";
+import { LogOut, Bell, Tag, FileText, ListChecks } from "lucide-react";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  // const { data: userInfo } = useGetUser();
+  const { data: userInfo } = useGetUser();
   const { credentials } = useNotificationStore();
-  // const isAdmin = userInfo?.role === "ADMIN";
-  const [activeSection, setActiveSection] = useState<"notifications" | "categories" | "articles">("notifications");
+  const isAdmin = userInfo?.role === "ADMIN";
+  const [activeSection, setActiveSection] = useState<
+    "notifications" | "categories" | "summaries" | "articles"
+  >("notifications");
 
   return (
     <div className='min-h-screen bg-gray-50'>
@@ -66,7 +69,7 @@ export default function Dashboard() {
                 }`}
             >
               <Bell className='w-4 h-4' />
-              Thông báo
+              <span className="hidden sm:inline">Thông báo</span>
             </button>
             <button
               onClick={() => setActiveSection("categories")}
@@ -76,9 +79,31 @@ export default function Dashboard() {
                 }`}
             >
               <Tag className='w-4 h-4' />
-              Thể loại
+              <span className="hidden sm:inline">Thể loại</span>
             </button>
-          
+            <button
+              onClick={() => setActiveSection("summaries")}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${
+                activeSection === "summaries"
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <ListChecks className='w-4 h-4' />
+              <span className="hidden sm:inline">Tóm tắt</span>
+            </button>
+          {isAdmin && (
+            <button
+              onClick={() => setActiveSection("articles")}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${activeSection === "articles"
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
+            >
+              <FileText className='w-4 h-4' />
+              <span className="hidden sm:inline">Bài viết</span>
+            </button>
+          )}
           </div>
         </div>
 
@@ -125,8 +150,24 @@ export default function Dashboard() {
           </>
         )}
 
+        {/* Sent Summaries Section */}
+        {activeSection === "summaries" && (
+          <>
+            <div className='mb-8'>
+              <h2 className='text-2xl font-bold text-gray-900 mb-2'>
+                Tóm tắt 
+              </h2>
+              <p className='text-gray-600'>
+                Xem lại các bài đã được hệ thống tóm tắt 
+              </p>
+            </div>
+
+            <SentSummariesList />
+          </>
+        )}
+
         {/* Articles Section (Admin only) */}
-        {activeSection === "articles" && (
+        {activeSection === "articles" && isAdmin && (
           <>
             <div className='mb-8'>
               <h2 className='text-2xl font-bold text-gray-900 mb-2'>

@@ -147,10 +147,33 @@ interface Article {
   url: string;
   title: string;
   content: string;
+  summary_text?: string;
   published_date?: string;
   crawled_at: string;
   source_id: number;
   category_id?: number;
+  category?: CategoryInfo | null;
+  source?: SourceInfo | null;
+}
+
+interface SummarizedArticleItem {
+  article_id: number;
+  title: string;
+  url: string;
+  summary_text: string;
+  summarized_at: string;
+  category?: CategoryInfo | null;
+  source?: SourceInfo | null;
+}
+
+interface ArticleNotificationItem {
+  id: number;
+  article_id: number;
+  title: string;
+  url: string;
+  summary_text: string;
+  sent_at: string;
+  channel_provider: string;
   category?: CategoryInfo | null;
   source?: SourceInfo | null;
 }
@@ -173,4 +196,46 @@ export const useArticles = (params?: ArticlesParams) => {
   });
 };
 
-export type { User, Article };
+interface ArticleNotificationsParams {
+  skip?: number;
+  limit?: number;
+  channel_provider?: string;
+  category_id?: number;
+  search?: string;
+}
+
+export const useArticleNotifications = (params?: ArticleNotificationsParams) => {
+  return useQuery({
+    queryKey: ["article-notifications", params],
+    queryFn: async () => {
+      const response = await api.get<ArticleNotificationItem[]>(
+        "/article-notifications/me",
+        { params }
+      );
+      return response.data;
+    },
+  });
+};
+
+interface SummariesParams {
+  skip?: number;
+  limit?: number;
+  category_id?: number;
+  source_id?: number;
+  search?: string;
+}
+
+export const useSummaries = (params?: SummariesParams) => {
+  return useQuery({
+    queryKey: ["summaries", params],
+    queryFn: async () => {
+      const response = await api.get<SummarizedArticleItem[]>(
+        "/summaries",
+        { params }
+      );
+      return response.data;
+    },
+  });
+};
+
+export type { User, Article, ArticleNotificationItem, SummarizedArticleItem };

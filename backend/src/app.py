@@ -1,7 +1,4 @@
-import asyncio
 import logging
-import signal
-import sys
 from contextlib import asynccontextmanager
 from fastapi import APIRouter
 
@@ -9,7 +6,15 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.routers import sources, auth, notifications, categories, articles
+from .api.routers import (
+    sources,
+    auth,
+    notifications,
+    categories,
+    articles,
+    article_notifications,
+    summaries,
+)
 from .database.migrations import init_db_with_migrations
 from .services.scheduler.job_scheduler import JobScheduler
 from .config.settings import settings
@@ -87,6 +92,8 @@ api_router.include_router(auth.router)
 api_router.include_router(notifications.router)
 api_router.include_router(categories.router)
 api_router.include_router(articles.router)
+api_router.include_router(article_notifications.router)
+api_router.include_router(summaries.router)
 
 app.include_router(api_router)
 
