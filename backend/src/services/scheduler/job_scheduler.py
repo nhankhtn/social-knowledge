@@ -2,6 +2,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Tuple
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 import logging
 import asyncio
@@ -353,7 +354,8 @@ class JobScheduler:
         """Notification job: send notifications to users based on their notification hours"""
         logger.info("Starting send notifications job...")
         
-        current_hour = datetime.now(settings.timezone).hour
+        # Use configured timezone string to build a ZoneInfo tz object
+        current_hour = datetime.now(ZoneInfo(settings.timezone)).hour
         logger.info(f"Current hour: {current_hour}")
         
         try:

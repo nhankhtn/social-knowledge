@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useGetUser } from "@/hooks/useUser";
+// import { useGetUser } from "@/hooks/useUser";
 import { useNotificationStore } from "@/store/notificationStore";
 import NotificationForm from "@/app/_sections/NotificationForm";
 import CategoryManagement from "@/app/_sections/CategoryManagement";
@@ -11,9 +11,9 @@ import { LogOut, Bell, Tag, FileText } from "lucide-react";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const { data: userInfo } = useGetUser();
+  // const { data: userInfo } = useGetUser();
   const { credentials } = useNotificationStore();
-  const isAdmin = userInfo?.role === "ADMIN";
+  // const isAdmin = userInfo?.role === "ADMIN";
   const [activeSection, setActiveSection] = useState<"notifications" | "categories" | "articles">("notifications");
 
   return (
@@ -78,18 +78,7 @@ export default function Dashboard() {
               <Tag className='w-4 h-4' />
               Thể loại
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => setActiveSection("articles")}
-                className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors ${activeSection === "articles"
-                  ? "text-indigo-600 border-b-2 border-indigo-600"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
-              >
-                <FileText className='w-4 h-4' />
-                Bài viết
-              </button>
-            )}
+          
           </div>
         </div>
 
@@ -137,7 +126,7 @@ export default function Dashboard() {
         )}
 
         {/* Articles Section (Admin only) */}
-        {isAdmin && activeSection === "articles" && (
+        {activeSection === "articles" && (
           <>
             <div className='mb-8'>
               <h2 className='text-2xl font-bold text-gray-900 mb-2'>
